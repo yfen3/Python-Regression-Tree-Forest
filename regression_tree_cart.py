@@ -36,7 +36,7 @@ class Tree(object):
 
     def lookup(self, x):
         """Returns the predicted value given the parameters."""
-        if self.left == None:
+        if self.left is None:
             return self.predict
         if x[self.split_var] <= self.split_val:
             return self.left.lookup(x)
@@ -50,7 +50,7 @@ class Tree(object):
         """Finds the smallest value of alpha and 
         the first branch for which the full tree 
         does not minimize the error-complexity measure."""
-        if (self.right == None):
+        if self.right is None:
             return float("Inf"), [self]
         b_error, num_nodes = self.get_cost_params()
         alpha = (self.error - b_error) / (num_nodes - 1)
@@ -82,13 +82,13 @@ class Tree(object):
             trees.append(copy.deepcopy(new_tree))
             alphas.append(alpha)
             # root node reached
-            if (node.start == True):
+            if node.start:
                 break
         return alphas, trees
 
     def get_cost_params(self):
         """Returns the branch error and number of nodes."""
-        if self.right == None:
+        if self.right is None:
             return self.error, 1
         error, num_nodes = self.right.get_cost_params()
         left_error, left_num = self.left.get_cost_params()
@@ -98,7 +98,7 @@ class Tree(object):
 
     def get_length(self):
         """Returns the length of the tree."""
-        if self.right == None:
+        if self.right is None:
             return 1
         right_len = self.right.get_length()
         left_len = self.left.get_length()
@@ -155,17 +155,37 @@ class Tree(object):
         return
 
 
-def grow_tree(data, depth, max_depth=500, Nmin=5, labels={}, start=False, feat_bag=False):
-    """Function to grow a regression tree given some training data."""
-    root = Tree(region_error(data.values()), numpy.mean(numpy.array(data.values())),
-                numpy.std(numpy.array(data.values())), start, len(data.values()))
+def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat_bag=False, loss_function=None):
+    """Function to grow a regression tree given some training data.
+    @param x: input data, a 2D array
+    @param y: target data
+    @param depth:
+    @param max_depth:
+    @param Nmin:
+    @param labels:
+    @param start:
+    @param feat_bag:
+    @param loss_function: allow the tree use customized loss function as the minimize target
+    @return:
+    """
+    root = Tree(
+        mse_loss(y),
+        numpy.mean(numpy.array(y)),
+        numpy.std(numpy.array(y)),
+        start,
+        len(y)
+    )
+
+    if not loss_function:
+        loss_function = mse_loss
+
     # regions has fewer than Nmin data points
-    if (len(data.values()) <= Nmin):
+    if len(y) <= Nmin:
         return root
     # length of tree exceeds max_depth
     if depth >= max_depth:
         return root
-    num_vars = len(data.keys()[0])
+    num_vars = len(labels)
 
     min_error = -1
     min_split = -1
@@ -175,20 +195,25 @@ def grow_tree(data, depth, max_depth=500, Nmin=5, labels={}, start=False, feat_b
     # If feature bagging (for random forests) choose sqrt(p) variables
     # where p is the total number of variables.
     # Otherwise select all variables.
-    if (feat_bag):
+    if feat_bag:
         cand_vars = random.sample(range(num_vars), int(num_vars ** (0.5)))
     else:
         cand_vars = range(num_vars)
     # iterate over parameter space
     for i in cand_vars:
-        var_space = [x[i] for x in data]
-        if (min(var_space) == max(var_space)):
+        var_space = [row[i] for row in x]
+        if min(var_space) == max(var_space):
             continue
         # find optimal split point for parameter i
-        split, error, ierr, numf = scipy.optimize.fminbound(error_function, min(var_space), max(var_space),
-                                                            args=(i, data), full_output=1)
+        split, error, ierr, numf = scipy.optimize.fminbound(
+            error_function,
+            min(var_space),
+            max(var_space),
+            args=(i, x, y, loss_function),
+            full_output=1
+        )
         # choose parameter that minimizes error
-        if ((error < min_error) or (min_error == -1)):
+        if (error < min_error) or (min_error == -1):
             min_error = error
             min_split = split
             split_var = i
@@ -199,16 +224,38 @@ def grow_tree(data, depth, max_depth=500, Nmin=5, labels={}, start=False, feat_b
     root.split_val = min_split
     if split_var in labels:
         root.split_lab = labels[split_var]
-    data1 = {}
-    data2 = {}
-    for i in data:
-        if i[split_var] <= min_split:
-            data1[i] = data[i]
+    x_left_branch = []
+    y_left_branch = []
+    x_right_branch = []
+    y_right_branch = []
+    for i in range(0, len(x)):
+        if x[i][split_var] <= min_split:
+            x_left_branch.append(x[i])
+            y_left_branch.append(y[i])
         else:
-            data2[i] = data[i]
+            x_right_branch.append(x[i])
+            y_right_branch.append(y[i])
     # grow right and left branches
-    root.left = grow_tree(data1, depth + 1, max_depth=max_depth, Nmin=Nmin, labels=labels, feat_bag=feat_bag)
-    root.right = grow_tree(data2, depth + 1, max_depth=max_depth, Nmin=Nmin, labels=labels, feat_bag=feat_bag)
+    root.left = grow_tree(
+        x_left_branch,
+        y_left_branch,
+        depth + 1,
+        max_depth=max_depth,
+        Nmin=Nmin,
+        labels=labels,
+        feat_bag=feat_bag,
+        loss_function=loss_function
+    )
+    root.right = grow_tree(
+        x_right_branch,
+        y_right_branch,
+        depth + 1,
+        max_depth=max_depth,
+        Nmin=Nmin,
+        labels=labels,
+        feat_bag=feat_bag,
+        loss_function=loss_function
+    )
     return root
 
 
@@ -283,19 +330,22 @@ def cvt(data, v, max_depth=500, Nmin=5, labels={}):
     return full_t[min_ind]
 
 
-def error_function(split_point, split_var, data):
+def error_function(split_point, split_var, x, y, loss_function):
+    if not loss_function:
+        raise ValueError('No loss function is defined.')
+
     """Function to minimize when choosing split point."""
     data1 = []
     data2 = []
-    for i in data:
-        if i[split_var] <= split_point:
-            data1.append(data[i])
+    for i in range(0, len(x)):
+        if x[i][split_var] <= split_point:
+            data1.append(y[i])
         else:
-            data2.append(data[i])
-    return region_error(data1) + region_error(data2)
+            data2.append(y[i])
+    return loss_function(data1) + loss_function(data2)
 
 
-def region_error(data):
+def mse_loss(data):
     """Calculates sum of squared error for some node in the regression tree."""
     data = numpy.array(data)
     return numpy.sum((data - numpy.mean(data)) ** 2)

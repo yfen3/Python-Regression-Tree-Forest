@@ -2,7 +2,7 @@ import csv
 from random_forest import *
 
 
-football = open("football.csv", "rb")
+football = open("football.csv", "r")
 f_reader = csv.DictReader(football)
 years = ["VII", "VIII", "IX", "X", "XI", "XII", "XIII"]
 variables = ["Age", "Att", "YA", "Rec", "YR", "RRTD", "Fmb"]
@@ -33,8 +33,8 @@ for row in f_reader:
             train_dict[tuple(dat)] = float(res)
 
 # number of bootstrap samples
-B = 50
-forest = make_forest(train_dict, B, max_depth = 500, Nmin = 5, labels = labels)
+number_of_bootstrap_samples = 50
+forest = make_forest(train_dict, number_of_bootstrap_samples, max_depth=500, Nmin=5, labels=labels)
 
 f = open("football_forest_new.txt", "wb")
 error = []
