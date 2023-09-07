@@ -45,4 +45,4 @@ for i in test_dict:
     error.append(abs(act_val - predict))
     
 f.close()
-print numpy.mean(numpy.array(error))
+print(numpy.mean(numpy.array(error)))

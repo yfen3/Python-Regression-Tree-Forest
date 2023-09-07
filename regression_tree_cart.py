@@ -2,7 +2,6 @@ import scipy
 import scipy.optimize
 import numpy
 import copy
-import sys
 import pygame
 import time
 import random
