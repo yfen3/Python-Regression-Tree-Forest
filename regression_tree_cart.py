@@ -9,9 +9,10 @@ import random
 import math
 from bisect import bisect_right
 from operator import itemgetter
+
 r = 1
 l = 2
-BLACK = ( 0, 0,  0)
+BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
@@ -20,19 +21,20 @@ tree_font = pygame.font.SysFont("Arial", 8)
 height = 3000
 width = 1200
 
+
 class Tree(object):
     def __init__(self, error, predict, stdev, start, num_points):
         self.error = error
         self.predict = predict
         self.stdev = stdev
-        self.start =  start
+        self.start = start
         self.split_var = None
         self.split_val = None
         self.split_lab = None
         self.left = None
         self.right = None
         self.num_points = num_points
-        
+
     def lookup(self, x):
         """Returns the predicted value given the parameters."""
         if self.left == None:
@@ -41,12 +43,10 @@ class Tree(object):
             return self.left.lookup(x)
         return self.right.lookup(x)
 
-    
     def predict_all(self, data):
         """Returns the predicted values for some list of data points."""
         return map(lambda x: self.lookup(x), data)
-        
-    
+
     def find_weakest(self):
         """Finds the smallest value of alpha and 
         the first branch for which the full tree 
@@ -67,8 +67,7 @@ class Tree(object):
         if smallest_alpha == alpha_left:
             smallest_trees = smallest_trees + tree_left
         return smallest_alpha, smallest_trees
-    
-    
+
     def prune_tree(self):
         """Finds {a1, ..., ak} and {T1, ..., Tk},
         the sequence of nested subtrees from which to 
@@ -88,7 +87,6 @@ class Tree(object):
                 break
         return alphas, trees
 
-    
     def get_cost_params(self):
         """Returns the branch error and number of nodes."""
         if self.right == None:
@@ -98,7 +96,6 @@ class Tree(object):
         error += left_error
         num_nodes += left_num
         return error, num_nodes
-
 
     def get_length(self):
         """Returns the length of the tree."""
@@ -117,7 +114,7 @@ class Tree(object):
             window.blit(p, branch)
             return
         if self.split_lab != None:
-            lab = tree_font.render("%s" % self.split_lab, 1, RED)    
+            lab = tree_font.render("%s" % self.split_lab, 1, RED)
         else:
             lab = tree_font.render("%d" % self.split_var, 1, RED)
         window.blit(lab, (s_width + (horz_step / 2), s_height))
@@ -130,20 +127,19 @@ class Tree(object):
         window.blit(l_val, left_start)
         pygame.draw.line(window, BLACK, branch, right_start)
         pygame.draw.line(window, BLACK, branch, left_start)
-        self.right.__drawTree(right_start[0], 
-            right_start[1], window, tree_length, horz_step, depth + 1, d_nodes)
-        self.left.__drawTree(left_start[0], 
-            left_start[1], window, tree_length, horz_step, depth + 1, d_nodes)
+        self.right.__drawTree(right_start[0],
+                              right_start[1], window, tree_length, horz_step, depth + 1, d_nodes)
+        self.left.__drawTree(left_start[0],
+                             left_start[1], window, tree_length, horz_step, depth + 1, d_nodes)
         return
 
-    
-    def display_tree(self, save = False, filename = "image.jpg", view=True):
+    def display_tree(self, save=False, filename="image.jpg", view=True):
         """Wrapper function to draw the tree.
             If save is set to True will save the image to filename.
             If view is set to True will display the image."""
         nodes = self.get_cost_params()[1]
         tree_length = self.get_length()
-        d_nodes = ((height - 40.0) / (2**(tree_length - 1))) 
+        d_nodes = ((height - 40.0) / (2 ** (tree_length - 1)))
         horz_step = ((width - 80) / tree_length)
         depth = 1
         window = pygame.display.set_mode((width, height))
@@ -153,17 +149,17 @@ class Tree(object):
             pygame.image.save(window, filename)
         while view:
             for event in pygame.event.get():
-                 if event.type == pygame.QUIT:
-                     view = False
+                if event.type == pygame.QUIT:
+                    view = False
             pygame.display.flip()
         pygame.quit()
         return
-            
 
-def grow_tree(data, depth, max_depth = 500, Nmin = 5, labels = {}, start = False, feat_bag = False):
+
+def grow_tree(data, depth, max_depth=500, Nmin=5, labels={}, start=False, feat_bag=False):
     """Function to grow a regression tree given some training data."""
-    root = Tree(region_error(data.values()), numpy.mean(numpy.array(data.values())), 
-        numpy.std(numpy.array(data.values())), start, len(data.values()))
+    root = Tree(region_error(data.values()), numpy.mean(numpy.array(data.values())),
+                numpy.std(numpy.array(data.values())), start, len(data.values()))
     # regions has fewer than Nmin data points
     if (len(data.values()) <= Nmin):
         return root
@@ -181,7 +177,7 @@ def grow_tree(data, depth, max_depth = 500, Nmin = 5, labels = {}, start = False
     # where p is the total number of variables.
     # Otherwise select all variables.
     if (feat_bag):
-        cand_vars = random.sample(range(num_vars), int(num_vars**(0.5)))
+        cand_vars = random.sample(range(num_vars), int(num_vars ** (0.5)))
     else:
         cand_vars = range(num_vars)
     # iterate over parameter space
@@ -190,7 +186,8 @@ def grow_tree(data, depth, max_depth = 500, Nmin = 5, labels = {}, start = False
         if (min(var_space) == max(var_space)):
             continue
         # find optimal split point for parameter i
-        split, error, ierr, numf = scipy.optimize.fminbound(error_function, min(var_space), max(var_space), args = (i, data), full_output = 1)
+        split, error, ierr, numf = scipy.optimize.fminbound(error_function, min(var_space), max(var_space),
+                                                            args=(i, data), full_output=1)
         # choose parameter that minimizes error
         if ((error < min_error) or (min_error == -1)):
             min_error = error
@@ -210,12 +207,13 @@ def grow_tree(data, depth, max_depth = 500, Nmin = 5, labels = {}, start = False
             data1[i] = data[i]
         else:
             data2[i] = data[i]
-    #grow right and left branches
-    root.left = grow_tree(data1, depth + 1, max_depth = max_depth, Nmin = Nmin, labels = labels, feat_bag = feat_bag)
-    root.right = grow_tree(data2, depth + 1, max_depth = max_depth, Nmin = Nmin, labels = labels, feat_bag = feat_bag)
+    # grow right and left branches
+    root.left = grow_tree(data1, depth + 1, max_depth=max_depth, Nmin=Nmin, labels=labels, feat_bag=feat_bag)
+    root.right = grow_tree(data2, depth + 1, max_depth=max_depth, Nmin=Nmin, labels=labels, feat_bag=feat_bag)
     return root
 
-def cvt(data, v, max_depth = 500, Nmin = 5, labels = {}):
+
+def cvt(data, v, max_depth=500, Nmin=5, labels={}):
     """Grows regression tree using v-fold cross validation.
     
     Data is a dictionary with elements of the form
@@ -228,14 +226,14 @@ def cvt(data, v, max_depth = 500, Nmin = 5, labels = {}):
      labels is a dictionary where the keys are the indices for the parameters in the data
      and the values are strings assigning a label to the parameters. 
      See football_parserf.py for an example implementation."""
-    full_tree = grow_tree(data, 0, max_depth = max_depth, Nmin = Nmin, 
-        labels = labels, start = True)
+    full_tree = grow_tree(data, 0, max_depth=max_depth, Nmin=Nmin,
+                          labels=labels, start=True)
     full_a, full_t = full_tree.prune_tree()
 
     # ak' = (ak * ak+1)^(1/2)
     a_s = []
     for i in range(len(full_a) - 1):
-        a_s.append((full_a[i] * full_a[i+1])**(.5))
+        a_s.append((full_a[i] * full_a[i + 1]) ** (.5))
     a_s.append(full_a[-1])
     # stratify data
     pairs = sorted(data.items(), key=itemgetter(1))
@@ -254,8 +252,8 @@ def cvt(data, v, max_depth = 500, Nmin = 5, labels = {}):
         train = {k: v for d in lv_s[:i] for (k, v) in d.items()}
         train.update({k: v for d in lv_s[(i + 1):] for (k, v) in d.items()})
         test = lv_s[i]
-        full_tree_v = grow_tree(train, 0, max_depth = max_depth, Nmin = Nmin, 
-            labels = labels, start = True)  
+        full_tree_v = grow_tree(train, 0, max_depth=max_depth, Nmin=Nmin,
+                                labels=labels, start=True)
         alphas_v, trees_v = full_tree_v.prune_tree()
         t_vs.append(trees_v)
         alpha_vs.append(alphas_v)
@@ -278,14 +276,13 @@ def cvt(data, v, max_depth = 500, Nmin = 5, labels = {}):
             para = [k[0] for k in pairs]
             va = [k[1] for k in pairs]
             pred_vals = tr_vs[alph_ind].predict_all(para)
-            r_kv = numpy.sum((numpy.array(va) - numpy.array(pred_vals))**2)
+            r_kv = numpy.sum((numpy.array(va) - numpy.array(pred_vals)) ** 2)
             R_k = R_k + r_kv
         if (R_k < min_R):
             min_R = R_k
             min_ind = i
     return full_t[min_ind]
 
-    
 
 def error_function(split_point, split_var, data):
     """Function to minimize when choosing split point."""
@@ -296,12 +293,10 @@ def error_function(split_point, split_var, data):
             data1.append(data[i])
         else:
             data2.append(data[i])
-    return region_error(data1) + region_error(data2)  
-    
+    return region_error(data1) + region_error(data2)
+
+
 def region_error(data):
     """Calculates sum of squared error for some node in the regression tree."""
     data = numpy.array(data)
-    return numpy.sum((data - numpy.mean(data))**2)
-
-
-
+    return numpy.sum((data - numpy.mean(data)) ** 2)
