@@ -24,23 +24,24 @@ class Forest(object):
         return preds
 
 
-def make_boot(pairs, n):
+def make_boot(x, y, number_of_trees):
     """Construct a bootstrap sample from the data."""
-    inds = numpy.random.choice(n, size=n, replace=True)
-    return dict(map(lambda x: pairs[x], inds))
+    inds = numpy.random.choice(len(x), size=numpy.floor(len(x)/number_of_trees).astype(int), replace=True)
+    return x[inds], y[inds]
 
 
 def make_forest(x, y, number_of_trees, max_depth=500, Nmin=5, labels={}, loss_function=None):
+    if len(x) <= Nmin * number_of_trees:
+        raise ValueError('Size of input should be lager than number_of_trees')
+
     """Function to grow a random forest given some training data."""
     trees = []
-    #n = len(data)
-    #pairs = data.items()
     for b in range(number_of_trees):
-        #boot = make_boot(pairs, n)
+        subsample_x, subsample_y = make_boot(x, y, number_of_trees)
         trees.append(
             regression_tree_cart.grow_tree(
-                x,
-                y,
+                subsample_x,
+                subsample_y,
                 0,
                 max_depth=max_depth,
                 Nmin=Nmin,
