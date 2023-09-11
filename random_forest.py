@@ -23,6 +23,17 @@ class Forest(object):
             preds.append(self.lookup(row))
         return preds
 
+    def get_loss(self):
+        """
+        Get the average error for a tree for all trees in the forest
+        @return: Errors from individual trees
+        """
+        losses = []
+        for tree in self.trees:
+            error, number_of_nodes = tree.get_cost_params()
+            losses.append(numpy.divide(error, number_of_nodes))
+        return losses
+
 
 def make_boot(x, y, number_of_trees):
     """Construct a bootstrap sample from the data."""
@@ -30,9 +41,20 @@ def make_boot(x, y, number_of_trees):
     return x[inds], y[inds]
 
 
-def make_forest(x, y, number_of_trees, max_depth=500, Nmin=5, labels={}, loss_function=None):
-    if len(x) <= Nmin * number_of_trees:
-        raise ValueError('Size of input should be lager than number_of_trees')
+def make_forest(x, y, number_of_trees, max_depth=500, min_samples_split=5, labels={}, loss_function=None):
+    """
+    Function to generate the random forest regressor
+    @param x:
+    @param y:
+    @param number_of_trees:
+    @param max_depth:
+    @param min_samples_split:
+    @param labels:
+    @param loss_function: Custom loss function
+    @return:
+    """
+    if len(x) <= min_samples_split * number_of_trees:
+        raise ValueError('Size of input should be lager than min_branch_size * min_samples_split')
 
     """Function to grow a random forest given some training data."""
     trees = []
@@ -44,7 +66,7 @@ def make_forest(x, y, number_of_trees, max_depth=500, Nmin=5, labels={}, loss_fu
                 subsample_y,
                 0,
                 max_depth=max_depth,
-                Nmin=Nmin,
+                min_samples_split=min_samples_split,
                 labels=labels,
                 start=True,
                 feat_bag=True,

@@ -155,13 +155,13 @@ class Tree(object):
         return
 
 
-def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat_bag=False, loss_function=None):
+def grow_tree(x, y, depth, max_depth=500, min_samples_split=5, labels=None, start=False, feat_bag=False, loss_function=None):
     """Function to grow a regression tree given some training data.
     @param x: input data, a 2D array
     @param y: target data
     @param depth:
     @param max_depth:
-    @param Nmin:
+    @param min_samples_split: minimum number for branching
     @param labels:
     @param start:
     @param feat_bag:
@@ -169,7 +169,7 @@ def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat
     @return:
     """
     root = Tree(
-        mse_loss(y),
+        mse_loss(x, y),
         numpy.mean(numpy.array(y)),
         numpy.std(numpy.array(y)),
         start,
@@ -180,7 +180,7 @@ def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat
         loss_function = mse_loss
 
     # regions has fewer than Nmin data points
-    if len(y) <= Nmin:
+    if len(y) <= min_samples_split:
         return root
     # length of tree exceeds max_depth
     if depth >= max_depth:
@@ -241,7 +241,7 @@ def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat
         y_left_branch,
         depth + 1,
         max_depth=max_depth,
-        Nmin=Nmin,
+        min_samples_split=min_samples_split,
         labels=labels,
         feat_bag=feat_bag,
         loss_function=loss_function
@@ -251,7 +251,7 @@ def grow_tree(x, y, depth, max_depth=500, Nmin=5, labels=None, start=False, feat
         y_right_branch,
         depth + 1,
         max_depth=max_depth,
-        Nmin=Nmin,
+        min_samples_split=min_samples_split,
         labels=labels,
         feat_bag=feat_bag,
         loss_function=loss_function
@@ -267,12 +267,12 @@ def cvt(data, v, max_depth=500, Nmin=5, labels={}):
      y is the response value. 
      v is the number of folds for cross validation.
      max_depth is the maximum length of a branch emanating from the starting node.
-     Nmin is the number of datapoints that must be present in a region to stop further partitions
+     min_branch_size is the number of datapoints that must be present in a region to stop further partitions
      in that region. 
      labels is a dictionary where the keys are the indices for the parameters in the data
      and the values are strings assigning a label to the parameters. 
      See football_parserf.py for an example implementation."""
-    full_tree = grow_tree(data, 0, max_depth=max_depth, Nmin=Nmin,
+    full_tree = grow_tree(data, 0, max_depth=max_depth, min_samples_split=Nmin,
                           labels=labels, start=True)
     full_a, full_t = full_tree.prune_tree()
 
@@ -298,7 +298,7 @@ def cvt(data, v, max_depth=500, Nmin=5, labels={}):
         train = {k: v for d in lv_s[:i] for (k, v) in d.items()}
         train.update({k: v for d in lv_s[(i + 1):] for (k, v) in d.items()})
         test = lv_s[i]
-        full_tree_v = grow_tree(train, 0, max_depth=max_depth, Nmin=Nmin,
+        full_tree_v = grow_tree(train, 0, max_depth=max_depth, min_samples_split=Nmin,
                                 labels=labels, start=True)
         alphas_v, trees_v = full_tree_v.prune_tree()
         t_vs.append(trees_v)
@@ -335,17 +335,22 @@ def error_function(split_point, split_var, x, y, loss_function):
         raise ValueError('No loss function is defined.')
 
     """Function to minimize when choosing split point."""
-    data1 = []
-    data2 = []
+    x_right = []
+    y_right = []
+    x_left = []
+    y_left = []
+
     for i in range(0, len(x)):
         if x[i][split_var] <= split_point:
-            data1.append(y[i])
+            x_right.append(x[i])
+            y_right.append(y[i])
         else:
-            data2.append(y[i])
-    return loss_function(data1) + loss_function(data2)
+            x_left.append(x[i])
+            y_left.append(y[i])
+    return loss_function(x_right, y_right) + loss_function(x_left, y_left)
 
 
-def mse_loss(data):
+def mse_loss(x, y):
     """Calculates sum of squared error for some node in the regression tree."""
-    data = numpy.array(data)
-    return numpy.sum((data - numpy.mean(data)) ** 2)
+    #data = numpy.array(y)
+    return numpy.sum((y - numpy.mean(y)) ** 2)
