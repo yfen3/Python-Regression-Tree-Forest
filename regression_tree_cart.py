@@ -352,5 +352,4 @@ def error_function(split_point, split_var, x, y, loss_function):
 
 def mse_loss(x, y):
     """Calculates sum of squared error for some node in the regression tree."""
-    #data = numpy.array(y)
     return numpy.sum((y - numpy.mean(y)) ** 2)
